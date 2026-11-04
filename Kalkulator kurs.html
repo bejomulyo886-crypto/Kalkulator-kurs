@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Kalkulator Kurs Global</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f6;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 14px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            display: inline-block;
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+            text-align: left;
+            position: relative;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+        label {
+            font-size: 14px;
+            color: #555;
+            font-weight: bold;
+        }
+        select, input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 16px 0;
+            font-size: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            background: #fafafa;
+        }
+        select:focus, input:focus {
+            border-color: #2196F3;
+            outline: none;
+            background: #fff;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .hasil {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            font-size: 21px;
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: center;
+            background: #eef2f5;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .info-kurs {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #666;
+            max-height: 130px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            line-height: 1.5;
+        }
+        
+        /* Gaya untuk Notifikasi Toast */
+        #notifikasi {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50px);
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            z-index: 1000;
+            pointer-events: none;
+            text-align: center;
+        }
+        #notifikasi.muncul {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        #notifikasi.sukses { background: #4CAF50; }
+        #notifikasi.info { background: #2196F3; }
+        #notifikasi.peringatan { background: #FF9800; }
+
+        footer {
+            margin-top: 25px;
+            font-size: 13px;
+            color: #777;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Elemen Kotak Notifikasi -->
+<div id="notifikasi">Memuat...</div>
+
+<div class="container">
+    <h2>Kalkulator Kurs Global</h2>
+    
+    <label for="mataUang">Pilih Mata Uang Asal:</label>
+    <select id="mataUang">
+        <option value="USD">USD - Dolar Amerika</option>
+        <option value="MYR">MYR - Ringgit Malaysia</option>
+        <option value="SGD">SGD - Dolar Singapura</option>
+        <option value="EUR">EUR - Euro Eropa</option>
+        <option value="GBP">GBP - Poundsterling Inggris</option>
+        <option value="AUD">AUD - Dolar Australia</option>
+        <option value="JPY">JPY - Yen Jepang</option>
+        <option value="CNY">CNY - Yuan Tiongkok</option>
+        <option value="KRW">KRW - Won Korea Selatan</option>
+        <option value="THB">THB - Baht Thailand</option>
+        <option value="HKD">HKD - Dolar Hong Kong</option>
+        <option value="SAR">SAR - Riyal Arab Saudi</option>
+        <option value="AED">AED - Dirham UEA</option>
+        <option value="INR">INR - Rupee India</option>
+        <option value="TWD">TWD - Dolar Baru Taiwan</option>
+    </select>
+
+    <label for="jumlah">Jumlah Nominal:</label>
+    <input type="number" id="jumlah" placeholder="Masukkan angka...">
+    
+    <button onclick="konversi()">Konversi ke Rupiah</button>
+    
+    <div class="hasil" id="hasil">Rp 0</div>
+    <div class="info-kurs" id="infoKurs">Memuat status kurs lengkap...</div>
+</div>
+
+<footer>
+    &copy; 2026 Kalkulator Kurs Multi | Dibuat dengan ❤️ Nama depan - kontingen
+</footer>
+
+<script>
+    let today = new Date().toDateString();
+    let savedDate = localStorage.getItem("kurs_tanggal_15");
+    
+    let daftarValas = ["USD", "MYR", "SGD", "EUR", "GBP", "AUD", "JPY", "CNY", "KRW", "THB", "HKD", "SAR", "AED", "INR", "TWD"];
+    let kursData = {};
+
+    daftarValas.forEach(valas => {
+        let savedVal = localStorage.getItem("kurs_" + valas);
+        kursData[valas] = savedVal ? parseFloat(savedVal) : (valas === "USD" ? 17000 : 1000);
+    });
+
+    // Fungsi untuk menampilkan animasi notifikasi di atas layar
+    function tampilkanNotifikasi(pesan, tipe = "info") {
+        let notif = document.getElementById("notifikasi");
+        notif.innerText = pesan;
+        notif.className = "muncul " + tipe;
+
+        // Hilangkan notifikasi otomatis setelah 3.5 detik
+        setTimeout(() => {
+            notif.className = "";
+        }, 3500);
+    }
+
+    function updateInfoText() {
+        let htmlText = "<b>Kurs Aktif (ke IDR):</b><br>";
+        for (let valas in kursData) {
+            let decimals = (valas === "JPY" || valas === "KRW") ? 2 : 0;
+            htmlText += `${valas}: Rp ${kursData[valas].toLocaleString("id-ID", {maximumFractionDigits: decimals})}<br>`;
+        }
+        document.getElementById("infoKurs").innerHTML = htmlText;
+    }
+    updateInfoText();
+
+    // Beritahu jika menggunakan data memori lokal saat awal buka
+    if (savedDate === today && localStorage.getItem("kurs_USD")) {
+        tampilkanNotifikasi("Menggunakan data kurs tersimpan (Cepat & Offline)", "info");
+    }
+
+    async function ambilKursTerbaru() {
+        if (savedDate !== today || !localStorage.getItem("kurs_USD")) {
+            tampilkanNotifikasi("Menghubungkan ke server untuk update kurs...", "peringatan");
+            try {
+                let response = await fetch('https://open.er-api.com/v6/latest/USD');
+                let data = await response.json();
+                
+                if (data && data.rates && data.rates.IDR) {
+                    let usdToIdr = data.rates.IDR;
+
+                    daftarValas.forEach(valas => {
+                        if (valas === "USD") {
+                            kursData[valas] = usdToIdr;
+                        } else if (data.rates[valas]) {
+                            kursData[valas] = usdToIdr / data.rates[valas];
+                        }
+                        localStorage.setItem("kurs_" + valas, kursData[valas]);
+                    });
+
+                    localStorage.setItem("kurs_tanggal_15", today);
+                    updateInfoText();
+                    tampilkanNotifikasi("Berhasil! Kurs hari ini telah diperbarui.", "sukses");
+                }
+            } catch (error) {
+                tampilkanNotifikasi("Gagal terhubung internet, pakai data offline.", "peringatan");
+            }
+        }
+    }
+
+    window.onload = ambilKursTerbaru;
+
+    function konversi() {
+        let pilihan = document.getElementById("mataUang").value;
+        let jumlah = document.getElementById("jumlah").value;
+        
+        if (jumlah === "" || jumlah <= 0) {
+            document.getElementById("hasil").innerHTML = "Masukkan jumlah yang valid!";
+            tampilkanNotifikasi("Nominal tidak boleh kosong atau minus!", "peringatan");
+            return;
+        }
+
+        let nilaiKurs = kursData[pilihan];
+        let totalRupiah = jumlah * nilaiKurs;
+        let maxDecimals = (pilihan === "JPY" || pilihan === "KRW") ? 2 : 0;
+
+        document.getElementById("hasil").innerHTML = "Rp " + totalRupiah.toLocaleString("id-ID", {maximumFractionDigits: maxDecimals});
+    }
+</script>
+
+</body>
+</html>
